@@ -27,7 +27,6 @@ class QueueManager:
             } for k in self.tasks
         }
         self.failed_task = []
-        self.job_status = None
         self.conn = conn
 
     @staticmethod
@@ -81,29 +80,50 @@ class QueueManager:
     def requeue(self):
         self._failed_job_enqueue()
 
-    def start_check(self, simple=False):
+    @property
+    # 仅在 requeue 开始前和结束后调用
+    def job_status(self):
         if self._has_failed_queue:
             if self._has_trace_failed_job:
-                self.job_status = "invalid"
+                job_status = "invalid"
             else:
-                self.job_status = "stuck"
+                job_status = "stuck"
         else:
-            self.job_status = "finished"
-        print("QueueManager", self.job_status)
-        if simple:
-            if self.job_status == "stuck":
-                self.conn.set(f"{self.code}_QueueManager", self.job_ids, timeout=None)
-            return self.job_status
+            job_status = "finished"
 
-        if self.job_status == "stuck":
+        return job_status
+
+    def _final_check(self):
+        while self.active_count:
+            time.sleep(5)
+
+        if self._has_failed_queue:
+            self.conn.delete(f"{self.code}_QueueManager")
+            raise RequeueFailedError()
+        else:
+            self.conn.delete(f"{self.code}_QueueManager")
+            return "finished"
+
+    def start_check(self, simple=False):
+        job_status = self.job_status
+        print("QueueManager", job_status)
+        if simple:
+            if job_status == "stuck":
+                self.conn.set(f"{self.code}_QueueManager", self.job_ids, timeout=None)
+            return job_status
+
+        if job_status == "stuck":
             self.requeue()
             # 检查重新入队后的 job 是否结束
-            while self.active_count:
-                time.sleep(5)
+            return self._final_check()
 
-            if self._has_failed_queue:
-                self.conn.delete(f"{self.code}_QueueManager")
-                raise RequeueFailedError()
-            else:
-                self.conn.delete(f"{self.code}_QueueManager")
+    def recover(self):
+        for task in self.tasks:
+            for jid in self.job_ids:
+                self.jobs[task].append(Job.fetch(jid, connection=self.queues[task].connection))
+
+        self.requeue()
+        self._final_check()
+
+        return self.job_status
 
