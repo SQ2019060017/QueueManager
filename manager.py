@@ -104,7 +104,7 @@ class QueueManager:
             self.conn.delete(f"{self.code}_QueueManager")
             return "finished"
 
-    def start_check(self, simple=False):
+    def start_check(self, simple=True):
         job_status = self.job_status
         print("QueueManager", job_status)
         if simple:
