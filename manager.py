@@ -6,7 +6,7 @@ from rq.job import Job
 from exceptions import FailedCalcQueueError, RequeueFailedError
 
 
-class QueueManager:
+class QueueManager(object):
 
     def __init__(self, code, conn, tasks: list):
         """
