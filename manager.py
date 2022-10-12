@@ -118,8 +118,8 @@ class QueueManager(object):
             return self._final_check()
 
     def recover(self):
-        for task in self.tasks:
-            for jid in self.job_ids:
+        for task, ids in self.job_ids:
+            for jid in ids:
                 self.jobs[task].append(Job.fetch(jid, connection=self.queues[task].connection))
 
         self.requeue()
