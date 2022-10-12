@@ -28,6 +28,7 @@ class QueueManager(object):
         }
         self.failed_task = []
         self.conn = conn
+        self.checked = None
 
     @staticmethod
     def _is_exists_traceback(job):
@@ -56,8 +57,10 @@ class QueueManager(object):
 
     @property
     def _has_failed_queue(self):
+        # TODO 需要区分首次检查还是后续检查
         for task in self.tasks:
             if int(self.queues[task].failed_job_registry.count) != int(self.init_statistic[task]['count']):
+                # TODO 非初次检查且仍然存在报错队列的情况下直接返回 True
                 self.failed_task.append(task)
                 all_ids = self.queues[task].failed_job_registry.get_job_ids()
                 # 归入 FAILED JOBS 的 JOB ID
@@ -84,7 +87,10 @@ class QueueManager(object):
     # 仅在 requeue 开始前和结束后调用
     def job_status(self):
         if self._has_failed_queue:
-            if self._has_trace_failed_job:
+            # TODO 增加是否初次检查的判断
+            if self.checked:
+                job_status = "invalid"
+            elif self._has_trace_failed_job:
                 job_status = "invalid"
             else:
                 job_status = "stuck"
@@ -97,6 +103,7 @@ class QueueManager(object):
         while self.active_count:
             time.sleep(5)
 
+        # TODO 斟酌缓存内删除信息的条件
         if self._has_failed_queue:
             self.conn.delete(f"{self.code}_QueueManager")
             raise RequeueFailedError()
@@ -118,6 +125,7 @@ class QueueManager(object):
             return self._final_check()
 
     def recover(self):
+        # TODO 需要判断是否当前状态【从缓存中恢复 或 检查完成后直接重新入队】 或 本函数仅限恢复状态使用
         for task, ids in self.job_ids:
             for jid in ids:
                 self.jobs[task].append(Job.fetch(jid, connection=self.queues[task].connection))
