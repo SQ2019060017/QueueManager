@@ -10,7 +10,7 @@
 # 使用示例
 
 qm = QueueManager(code="project_name", conn=conn, tasks=["task1", "task2"])
-# 检查队列运行转改，是否存在失败队列
+# 检查队列运行状态，是否存在失败队列
 qm.start_check()
 # 对无报错信息的失败任务重新入队，并判断最终运行结果
 qm.recover()
