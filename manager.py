@@ -60,7 +60,9 @@ class QueueManager(object):
         # TODO 需要区分首次检查还是后续检查
         for task in self.tasks:
             if int(self.queues[task].failed_job_registry.count) != int(self.init_statistic[task]['count']):
-                # TODO 非初次检查且仍然存在报错队列的情况下直接返回 True
+                # 非初次检查且仍然存在任意报错队列的情况下直接返回 True
+                if self.checked:
+                    return True
                 self.failed_task.append(task)
                 all_ids = self.queues[task].failed_job_registry.get_job_ids()
                 # 归入 FAILED JOBS 的 JOB ID
@@ -127,6 +129,8 @@ class QueueManager(object):
 
     def recover(self):
         # TODO 需要判断是否当前状态【从缓存中恢复 或 检查完成后直接重新入队】 或 本函数仅限恢复状态使用
+        if self.checked:
+            return None
         for task, ids in self.job_ids:
             for jid in ids:
                 self.jobs[task].append(Job.fetch(jid, connection=self.queues[task].connection))
