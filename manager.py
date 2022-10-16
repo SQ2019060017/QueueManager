@@ -87,7 +87,7 @@ class QueueManager(object):
     # 仅在 requeue 开始前和结束后调用
     def job_status(self):
         if self._has_failed_queue:
-            # TODO 增加是否初次检查的判断
+            # 增加是否初次检查的判断
             if self.checked:
                 job_status = "invalid"
             elif self._has_trace_failed_job:
@@ -113,6 +113,7 @@ class QueueManager(object):
 
     def start_check(self, simple=True):
         job_status = self.job_status
+        self.checked = True
         print("QueueManager", job_status)
         if simple:
             if job_status == "stuck":
